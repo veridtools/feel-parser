@@ -52,8 +52,9 @@ All tests are colocated with the source files they cover:
 ```
 src/lexer/index.test.ts         → tokenizer tests
 src/parser/index.test.ts        → AST shape tests for all node types
-src/parser/errors.test.ts       → parse error messages
-src/parser/safeParse.test.ts    → safeParse() — valid/invalid inputs, ParseError shape
+src/parser/errors.test.ts       → parse error messages (parse() throwing contract)
+src/parser/safeParse.test.ts    → safeParse() contract — valid/invalid inputs, ParseSyntaxError shape
+src/parser/recovery.test.ts     → error recovery — ErrorNode, ParseSyntaxError, per-construct recovery, accumulation
 src/index.test.ts               → public API, DMN / TCK expression patterns
 src/language.test.ts            → full FEEL language coverage (80+ builtins, OMG conformance, vendor extensions)
 src/summarize.test.ts           → summarize() — header fields, root detail, node-type breakdown, loc spans
@@ -90,19 +91,21 @@ When adding a new multi-word builtin to `feel-runner`, add it to `KNOWN_NAMES` h
 
 ```ts
 // Core
-parse(src, dialect?, knownNames?) → AstNode        // throws on error
-safeParse(src, dialect?, knownNames?) → ParseResult // never throws
-tokenize(src) → Token[]
+parse(src, dialect?, knownNames?) → AstNode        // throws ParseSyntaxError on error
+safeParse(src, dialect?, knownNames?) → ParseResult // never throws; ast always non-null
 
 // Traversal
-walk(node, visitor)   // depth-first, pre-order
+walk(node, visitor)   // depth-first, pre-order — handles ErrorNode safely
 type Visitor          // Partial record keyed by AstNode['type']
 
 // Data
 KNOWN_NAMES           // Set<string> of all multi-word builtin names
 
+// Classes
+ParseSyntaxError      // extends Error; has start + end byte offsets
+
 // Types
-AstNode, Loc, ParseError, ParseResult
+AstNode, ErrorNode, Loc, ParseResult
 Token, TokenType
 FeelType, RangeLiteral, FeelDialect
 ```
@@ -114,6 +117,10 @@ FeelType, RangeLiteral, FeelDialect
 **`NumberLiteral.value` is a raw string** — the parser stores numeric literals as their raw source text. The downstream evaluator converts them to `Decimal` instances. This keeps the parser dependency-free.
 
 **`loc: Loc` on every AstNode** — source span `{ start, end }` in byte offsets. Note: `RangeLiteral` uses `start/end` for range bounds (`AstNode | null`), so source positions are wrapped as `loc` to avoid collision.
+
+**Error recovery in `safeParse`** — the parser never throws internally; errors are accumulated in `parser.errors: ParseSyntaxError[]`. Invalid positions become `ErrorNode` sentinels so parsing continues. `parse()` re-throws the first error after the full parse completes. `safeParse()` reads `parser.errors` directly — no try/catch or regex extraction.
+
+**`ParseSyntaxError` is the single error type** — replaces the former `ParseError` interface. Used in both `parse()` (thrown) and `safeParse()` (returned in `errors[]`). Defined in `src/parser/ast.ts` to avoid circular dependencies.
 
 **`exactOptionalPropertyTypes: true`** — optional fields on AST nodes must be explicitly absent, not `undefined`.
 

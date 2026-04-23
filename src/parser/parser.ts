@@ -1,6 +1,12 @@
 import type { Token } from '../lexer/index.js';
 import { TokenType } from '../lexer/index.js';
-import type { AstNode, ContextEntry, FeelType, Loc } from './ast.js';
+import {
+  type AstNode,
+  type ContextEntry,
+  type FeelType,
+  type Loc,
+  ParseSyntaxError,
+} from './ast.js';
 import {
   BP,
   KNOWN_NAME_PREFIXES,
@@ -8,12 +14,15 @@ import {
   MULTI_WORD_PATH_CONTINUATIONS,
 } from './constants.js';
 
+export { ParseSyntaxError } from './ast.js';
+
 export class Parser {
   private tokens: Token[];
   private pos = 0;
   private inRangeEnd = false;
   private inLetValue = false;
   private knownNames: Set<string> = new Set();
+  public errors: ParseSyntaxError[] = [];
 
   constructor(tokens: Token[], knownNames?: Set<string>) {
     this.tokens = tokens;
@@ -25,17 +34,34 @@ export class Parser {
   }
 
   private advance(): Token {
-    const tok = this.tokens[this.pos]!;
+    const tok = this.tokens[this.pos] ?? { type: TokenType.EOF, value: '', start: 0, end: 0 };
     this.pos++;
     return tok;
+  }
+
+  private addError(message: string, start: number, end: number): void {
+    this.errors.push(new ParseSyntaxError(message, start, end));
+  }
+
+  private synchronize(): void {
+    while (!this.check(TokenType.EOF)) {
+      const t = this.peek().type;
+      if (
+        t === TokenType.Comma ||
+        t === TokenType.RParen ||
+        t === TokenType.RBracket ||
+        t === TokenType.RBrace
+      )
+        break;
+      this.advance();
+    }
   }
 
   private expect(type: TokenType): Token {
     const tok = this.peek();
     if (tok.type !== type) {
-      throw new Error(
-        `Expected ${type} but got ${tok.type} (${tok.value}) at ${tok.start}..${tok.end}`,
-      );
+      this.addError(`Expected ${type} but got ${tok.type} (${tok.value})`, tok.start, tok.end);
+      return { type, value: '', start: tok.start, end: tok.start };
     }
     return this.advance();
   }
@@ -236,8 +262,19 @@ export class Parser {
       case TokenType.Name:
         return this.parseName();
 
-      default:
-        throw new Error(`Unexpected token: ${tok.type} (${tok.value}) at ${tok.start}..${tok.end}`);
+      default: {
+        const badTok = this.advance();
+        this.addError(
+          `Unexpected token: ${badTok.type} (${badTok.value})`,
+          badTok.start,
+          badTok.end,
+        );
+        return {
+          type: 'ErrorNode',
+          message: `Unexpected token: ${badTok.type}`,
+          loc: { start: badTok.start, end: badTok.end },
+        };
+      }
     }
   }
 
@@ -563,8 +600,14 @@ export class Parser {
         };
       }
 
-      default:
-        throw new Error(`Unexpected infix token: ${tok.type} at ${tok.start}..${tok.end}`);
+      default: {
+        this.addError(`Unexpected infix token: ${tok.type}`, tok.start, tok.end);
+        return {
+          type: 'ErrorNode',
+          message: `Unexpected infix token: ${tok.type}`,
+          loc: { start: tok.start, end: tok.end },
+        };
+      }
     }
   }
 
@@ -633,9 +676,13 @@ export class Parser {
     if (this.match(TokenType.RBracket)) return { node, endIncluded: true };
     if (this.match(TokenType.RParen)) return { node, endIncluded: false };
     if (this.match(TokenType.LBracket)) return { node, endIncluded: false };
-    throw new Error(
-      `Expected range end delimiter ] ) or [, got ${this.peek().type} at ${this.peek().start}..${this.peek().end}`,
+    const badTok = this.peek();
+    this.addError(
+      `Expected range end delimiter ] ) or [, got ${badTok.type}`,
+      badTok.start,
+      badTok.end,
     );
+    return { node, endIncluded: false };
   }
 
   private parseParenOrOpenRange(parenStart: number): AstNode {
@@ -710,9 +757,9 @@ export class Parser {
         } else if (keyTok.type === TokenType.Name) {
           key = this.readMultiWordName();
         } else {
-          throw new Error(
-            `Expected context key, got ${keyTok.type} at ${keyTok.start}..${keyTok.end}`,
-          );
+          this.addError(`Expected context key, got ${keyTok.type}`, keyTok.start, keyTok.end);
+          this.synchronize();
+          continue;
         }
 
         this.expect(TokenType.Colon);

@@ -97,7 +97,7 @@ node dist/bin/feel-parser.js "some x in [1,2,3] satisfies x > 2"
 | `dialect` | `FeelDialect` | `'expression'` | `'expression'` or `'unary-tests'` |
 | `knownNames` | `Set<string>` | `new Set()` | Multi-word names in scope |
 
-Returns an `AstNode`. Throws a `SyntaxError` with a descriptive message on parse failure.
+Returns an `AstNode`. Throws a `ParseSyntaxError` with `message`, `start`, and `end` on parse failure.
 
 ### `tokenize(source)`
 
@@ -105,11 +105,18 @@ Returns `Token[]`. Each token has `type: TokenType`, `value: string`, `start: nu
 
 ### `safeParse(source, dialect?, knownNames?)`
 
-Like `parse()` but never throws. Returns `{ ast: AstNode | null, errors: ParseError[] }`.
+Like `parse()` but never throws. Returns `{ ast: AstNode, errors: ParseSyntaxError[] }`.
+
+On error, `ast` is a partial tree where invalid positions are filled with `ErrorNode` sentinels — the parser recovers and continues past each error.
 
 ```ts
 const { ast, errors } = safeParse('1 +')
-// ast → null, errors → [{ message: '...', start: 3, end: 4 }]
+// ast    → BinaryOp { op: '+', left: NumberLiteral{1}, right: ErrorNode }
+// errors → [ParseSyntaxError { message: '...', start: 3, end: 3 }]
+
+const ok = safeParse('1 + 2')
+// ok.ast    → BinaryOp { op: '+', ... }
+// ok.errors → []
 ```
 
 ### `walk(node, visitor)`
@@ -145,9 +152,9 @@ parse('"hello"').loc // { start: 0, end: 7 }
 ### Types
 
 ```ts
-import type { AstNode, Token, FeelDialect, FeelType, RangeLiteral } from '@veridtools/feel-parser'
-import type { Loc, ParseError, ParseResult, Visitor } from '@veridtools/feel-parser'
-import { TokenType, KNOWN_NAMES } from '@veridtools/feel-parser'
+import type { AstNode, ErrorNode, Token, FeelDialect, FeelType, RangeLiteral } from '@veridtools/feel-parser'
+import type { Loc, ParseResult, Visitor } from '@veridtools/feel-parser'
+import { ParseSyntaxError, TokenType, KNOWN_NAMES } from '@veridtools/feel-parser'
 ```
 
 ## Development
@@ -172,7 +179,8 @@ All tests are colocated with the source files they cover (`src/**/*.test.ts`):
 | `src/lexer/index.test.ts` | Tokenizer — all token types, positions |
 | `src/parser/index.test.ts` | AST shapes for all node types |
 | `src/parser/errors.test.ts` | Parse errors and error messages |
-| `src/parser/safeParse.test.ts` | `safeParse()` — valid/invalid inputs, `ParseError` shape |
+| `src/parser/safeParse.test.ts` | `safeParse()` contract — valid/invalid inputs, error shape, never throws |
+| `src/parser/recovery.test.ts` | Error recovery — `ErrorNode`, `ParseSyntaxError`, per-construct recovery, accumulation |
 | `src/index.test.ts` | Public API, DMN / TCK expression patterns |
 | `src/language.test.ts` | Full FEEL language coverage — all 80+ builtins, OMG DMN 1.5 conformance, vendor extensions |
 | `src/summarize.test.ts` | `summarize()` — header fields, root detail, node-type breakdown, loc spans |

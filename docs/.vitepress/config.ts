@@ -4,14 +4,17 @@ import { defineConfig } from 'vitepress';
 const require = createRequire(import.meta.url);
 const { version } = require('../../package.json');
 
+const base = '/feel-parser/';
+
 export default defineConfig({
+  base,
   title: 'Verid',
   titleTemplate: ':title | feel-parser',
   description: 'FEEL expression lexer and parser — produces a typed AST from FEEL source',
   lang: 'en-US',
   ignoreDeadLinks: true,
 
-  head: [['link', { rel: 'icon', type: 'image/webp', href: '/verd-logo.webp' }]],
+  head: [['link', { rel: 'icon', type: 'image/webp', href: `${base}verd-logo.webp` }]],
 
   themeConfig: {
     logo: '/verd-logo.webp',
