@@ -187,7 +187,7 @@ All tests are colocated with the source files they cover (`src/**/*.test.ts`):
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## License
 
