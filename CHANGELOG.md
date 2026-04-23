@@ -1,5 +1,11 @@
 # @veridtools/feel-parser
 
+## 0.1.1
+
+### Patch Changes
+
+- 5e7d70f: Change `ParseError` shape: `pos: number` replaced by `start: number` and `end: number` for precise token-span error reporting. Add `summarize(ast, tokens, dialect)` internal utility and playground summary tab.
+
 ## 0.1.0
 
 ### Minor Changes
