@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse, tokenize } from '../src/index.js';
 
-const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '../../package.json');
+const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '../package.json');
 const { version } = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version: string };
 
 const BANNER = `
