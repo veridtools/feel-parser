@@ -10,7 +10,6 @@ export enum TokenType {
   False = 'false',
   Null = 'null',
   If = 'if',
-  // biome-ignore lint/suspicious/noThenProperty: FEEL keyword
   Then = 'then',
   Else = 'else',
   For = 'for',

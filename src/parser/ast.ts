@@ -5,15 +5,20 @@ export interface Loc {
   end: number;
 }
 
-export interface ParseError {
-  message: string;
-  start: number;
-  end: number;
+export class ParseSyntaxError extends Error {
+  constructor(
+    message: string,
+    public readonly start: number,
+    public readonly end: number,
+  ) {
+    super(message);
+    this.name = 'ParseSyntaxError';
+  }
 }
 
 export type ParseResult = {
-  ast: AstNode | null;
-  errors: ParseError[];
+  ast: AstNode;
+  errors: ParseSyntaxError[];
 };
 
 export type AstNode =
@@ -40,7 +45,14 @@ export type AstNode =
   | InExpression
   | BetweenExpression
   | LetExpression
-  | PipelineExpression;
+  | PipelineExpression
+  | ErrorNode;
+
+export interface ErrorNode {
+  type: 'ErrorNode';
+  message: string;
+  loc: Loc;
+}
 
 export interface NumberLiteral {
   type: 'NumberLiteral';

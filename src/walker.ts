@@ -86,5 +86,7 @@ export function walk(node: AstNode, visitor: Visitor): void {
       walk(node.left, visitor);
       walk(node.right, visitor);
       break;
+    case 'ErrorNode':
+      break;
   }
 }

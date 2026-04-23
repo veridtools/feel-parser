@@ -22,7 +22,7 @@ function parse(
 | `dialect` | `'expression'` | Grammar entry point |
 | `knownNames` | `new Set()` | Multi-word identifier hints |
 
-Throws a `SyntaxError` (or similar) when the input is malformed.
+Throws a `ParseSyntaxError` (with `start` and `end` byte offsets) when the input is malformed. Use `safeParse()` for non-throwing error recovery.
 
 ## How it works
 

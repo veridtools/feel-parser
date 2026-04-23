@@ -8,9 +8,9 @@ describe('safeParse', () => {
     expect(result.ast).toMatchObject({ type: 'BinaryOp', op: '+' });
   });
 
-  it('returns null ast and error for invalid expression', () => {
+  it('returns partial ast and error for invalid expression', () => {
     const result = safeParse('1 +');
-    expect(result.ast).toBeNull();
+    expect(result.ast).not.toBeNull();
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatchObject({
       message: expect.any(String),
@@ -21,7 +21,7 @@ describe('safeParse', () => {
 
   it('error span points to the bad token', () => {
     const result = safeParse('if true then');
-    expect(result.ast).toBeNull();
+    expect(result.errors.length).toBeGreaterThan(0);
     const err = result.errors[0]!;
     expect(err.start).toBeGreaterThanOrEqual(0);
     expect(err.end).toBeGreaterThanOrEqual(err.start);
@@ -41,9 +41,8 @@ describe('safeParse', () => {
     expect(result.ast).toMatchObject({ type: 'UnaryTestList' });
   });
 
-  it('returns null ast on unary-tests parse error', () => {
+  it('returns partial ast on unary-tests parse error', () => {
     const result = safeParse('>=', 'unary-tests');
-    expect(result.ast).toBeNull();
     expect(result.errors.length).toBeGreaterThan(0);
   });
 

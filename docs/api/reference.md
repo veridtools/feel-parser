@@ -58,7 +58,7 @@ Tokenizes and parses a FEEL expression, returning the root AST node.
 
 **Returns** `AstNode`
 
-**Throws** `SyntaxError` on malformed input.
+**Throws** `ParseSyntaxError` on malformed input. The error carries `start` and `end` byte offsets pointing to the offending token.
 
 **Example**
 
@@ -115,7 +115,7 @@ enum TokenType {
 
 ## `AstNode` {#astnode}
 
-A discriminated union of all 24 AST node types. Switch on `node.type`:
+A discriminated union of all 25 AST node types. Switch on `node.type`:
 
 ```ts
 import type { AstNode } from '@veridtools/feel-parser';
@@ -128,7 +128,8 @@ function describe(node: AstNode): string {
     case 'NullLiteral':     return 'null';
     case 'Identifier':      return `name: ${node.name}`;
     case 'BinaryOp':        return `${node.op}`;
-    // ... all 24 cases
+    case 'ErrorNode':       return `error: ${node.message}`;
+    // ... all 25 cases
     default: {
       const _: never = node; // exhaustive check
       throw new Error('unknown node');
@@ -187,22 +188,18 @@ function safeParse(
 ): ParseResult
 ```
 
-Like `parse()` but never throws. Returns `{ ast, errors }`.
+Like `parse()` but never throws. Recovers from syntax errors and always returns a non-null AST.
 
 **Returns** `ParseResult`
 
 ```ts
 type ParseResult = {
-  ast: AstNode | null;
-  errors: ParseError[];
+  ast: AstNode;              // always non-null — ErrorNode sentinels fill invalid positions
+  errors: ParseSyntaxError[];
 };
-
-interface ParseError {
-  message: string;
-  start: number; // inclusive byte offset of the offending token
-  end: number;   // exclusive byte offset of the offending token
-}
 ```
+
+On invalid input, `ast` is a partial tree with `ErrorNode` sentinels where parsing failed. The parser continues past each error and accumulates all of them in `errors`.
 
 **Example**
 
@@ -210,13 +207,52 @@ interface ParseError {
 import { safeParse } from '@veridtools/feel-parser';
 
 const { ast, errors } = safeParse('1 +');
-// ast    → null
-// errors → [{ message: 'Unexpected token: EOF ...', start: 3, end: 3 }]
+// ast    → BinaryOp { op: '+', left: NumberLiteral{1}, right: ErrorNode }
+// errors → [ParseSyntaxError { message: '...', start: 3, end: 3 }]
 
 const ok = safeParse('1 + 2');
 // ok.ast    → BinaryOp { op: '+', ... }
 // ok.errors → []
 ```
+
+---
+
+## `ParseSyntaxError` {#parsesyntaxerror}
+
+```ts
+class ParseSyntaxError extends Error {
+  readonly start: number; // inclusive byte offset of the offending token
+  readonly end: number;   // exclusive byte offset of the offending token
+}
+```
+
+Thrown by `parse()` on malformed input. Also returned in `safeParse().errors[]`.
+
+```ts
+import { parse, ParseSyntaxError } from '@veridtools/feel-parser';
+
+try {
+  parse('1 +');
+} catch (e) {
+  if (e instanceof ParseSyntaxError) {
+    console.log(e.message, e.start, e.end);
+  }
+}
+```
+
+---
+
+## `ErrorNode` {#errornode}
+
+```ts
+interface ErrorNode {
+  type: 'ErrorNode';
+  message: string;
+  loc: Loc;
+}
+```
+
+Sentinel AST node inserted by `safeParse()` at positions where parsing failed. Safe to traverse with `walk()` — it has no children.
 
 ---
 

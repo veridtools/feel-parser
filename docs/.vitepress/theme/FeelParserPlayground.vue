@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { parse, tokenize } from '../../../src/index.ts';
+import { safeParse, tokenize } from '../../../src/index.ts';
 import { summarize } from '../../../src/summarize.ts';
 
 // ── Quick examples ────────────────────────────────────────────────────────────
@@ -211,6 +211,35 @@ const EXAMPLES = [
     dialect: 'unary-tests' as const,
     tab: 'summary' as const,
   },
+  // ── Error recovery ──
+  {
+    label: 'Error: missing operand',
+    expr: '1 +',
+    names: '',
+    dialect: 'expression' as const,
+    tab: 'json' as const,
+  },
+  {
+    label: 'Error: bad list element',
+    expr: '[1, *, 3]',
+    names: '',
+    dialect: 'expression' as const,
+    tab: 'json' as const,
+  },
+  {
+    label: 'Error: bad context key',
+    expr: '{a: 1, *: 2, c: 3}',
+    names: '',
+    dialect: 'expression' as const,
+    tab: 'json' as const,
+  },
+  {
+    label: 'Error: missing then',
+    expr: 'if true 1 else 2',
+    names: '',
+    dialect: 'expression' as const,
+    tab: 'json' as const,
+  },
   // ── Tokens ──
   {
     label: 'Tokens',
@@ -230,15 +259,15 @@ const activeTab = ref<'summary' | 'json' | 'tokens'>('summary');
 const summaryResult = ref<string | null>(null);
 const jsonResult = ref<string | null>(null);
 const tokensResult = ref<string | null>(null);
-const error = ref<string | null>(null);
+const parseErrors = ref<Array<{ message: string; start: number; end: number }>>([]);
 const ran = ref(false);
 const selectedExample = ref<string | null>(null);
 
 function run() {
-  error.value = null;
   summaryResult.value = null;
   jsonResult.value = null;
   tokensResult.value = null;
+  parseErrors.value = [];
   ran.value = true;
 
   const knownNames = new Set(
@@ -248,25 +277,22 @@ function run() {
       .filter(Boolean),
   );
 
-  try {
-    const tokens = tokenize(expression.value);
-    tokensResult.value = JSON.stringify(
-      tokens.map((t) => ({
-        type: t.type,
-        value: t.value || undefined,
-        start: t.start,
-        end: t.end,
-      })),
-      null,
-      2,
-    );
+  const tokens = tokenize(expression.value);
+  tokensResult.value = JSON.stringify(
+    tokens.map((t) => ({
+      type: t.type,
+      value: t.value || undefined,
+      start: t.start,
+      end: t.end,
+    })),
+    null,
+    2,
+  );
 
-    const ast = parse(expression.value, dialect.value, knownNames);
-    jsonResult.value = JSON.stringify(ast, null, 2);
-    summaryResult.value = summarize(ast, tokens, dialect.value);
-  } catch (e) {
-    error.value = String(e);
-  }
+  const { ast, errors } = safeParse(expression.value, dialect.value, knownNames);
+  parseErrors.value = errors.map((e) => ({ message: e.message, start: e.start, end: e.end }));
+  jsonResult.value = JSON.stringify(ast, null, 2);
+  summaryResult.value = summarize(ast, tokens, dialect.value);
 }
 
 // biome-ignore lint/correctness/noUnusedVariables: called from Vue template
@@ -309,19 +335,36 @@ onMounted(() => run());
       />
     </div>
 
-    <div class="input-group">
-      <label class="input-label">
-        Known Names
-        <span class="label-hint">— comma-separated variable names for multi-word resolution</span>
-      </label>
-      <input
-        v-model="namesStr"
-        class="names-input"
-        placeholder='e.g. Full Name, Monthly Salary'
-        spellcheck="false"
-        @keydown.ctrl.enter="run"
-        @keydown.meta.enter="run"
-      />
+    <div class="input-row">
+      <div class="input-group input-group--grow">
+        <label class="input-label">
+          Known Names
+          <span class="label-hint">— comma-separated variable names for multi-word resolution</span>
+        </label>
+        <input
+          v-model="namesStr"
+          class="names-input"
+          placeholder='e.g. Full Name, Monthly Salary'
+          spellcheck="false"
+          @keydown.ctrl.enter="run"
+          @keydown.meta.enter="run"
+        />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Dialect</label>
+        <div class="dialect-toggle">
+          <button
+            class="dialect-btn"
+            :class="{ active: dialect === 'expression' }"
+            @click="dialect = 'expression'; run()"
+          >expression</button>
+          <button
+            class="dialect-btn"
+            :class="{ active: dialect === 'unary-tests' }"
+            @click="dialect = 'unary-tests'; run()"
+          >unary-tests</button>
+        </div>
+      </div>
     </div>
 
     <button class="run-btn" @click="run">
@@ -329,27 +372,33 @@ onMounted(() => run());
     </button>
 
     <div v-if="ran" class="output">
-      <div v-if="error" class="output-error">{{ error }}</div>
-      <template v-else>
-        <div class="tabs">
-          <button
-            class="tab-btn"
-            :class="{ active: activeTab === 'summary' }"
-            @click="activeTab = 'summary'"
-          >summary</button>
-          <button
-            class="tab-btn"
-            :class="{ active: activeTab === 'json' }"
-            @click="activeTab = 'json'"
-          >json</button>
-          <button
-            class="tab-btn"
-            :class="{ active: activeTab === 'tokens' }"
-            @click="activeTab = 'tokens'"
-          >tokens</button>
+      <div v-if="parseErrors.length > 0" class="output-errors">
+        <div class="output-errors-title">
+          ⚠ {{ parseErrors.length }} parse error{{ parseErrors.length > 1 ? 's' : '' }} — partial AST returned
         </div>
-        <pre class="output-value">{{ activeTab === 'summary' ? summaryResult : activeTab === 'json' ? jsonResult : tokensResult }}</pre>
-      </template>
+        <div v-for="(err, i) in parseErrors" :key="i" class="output-error-item">
+          <span class="err-loc">[{{ err.start }}..{{ err.end }}]</span>
+          <span class="err-msg">{{ err.message }}</span>
+        </div>
+      </div>
+      <div class="tabs">
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'summary' }"
+          @click="activeTab = 'summary'"
+        >summary</button>
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'json' }"
+          @click="activeTab = 'json'"
+        >json</button>
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'tokens' }"
+          @click="activeTab = 'tokens'"
+        >tokens</button>
+      </div>
+      <pre class="output-value">{{ activeTab === 'summary' ? summaryResult : activeTab === 'json' ? jsonResult : tokensResult }}</pre>
     </div>
 
   </div>
@@ -401,6 +450,10 @@ onMounted(() => run());
 
 .input-group {
   margin-bottom: 0.8rem;
+}
+
+.input-group:not(.input-group--grow) {
+  margin-bottom: 0;
 }
 
 .input-label {
@@ -482,13 +535,91 @@ onMounted(() => run());
   margin-top: 0.5rem;
 }
 
-.output-error {
-  background: #fee2e2;
-  color: #b91c1c;
-  padding: 12px 16px;
+.input-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 0.8rem;
+}
+
+.input-group--grow {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.dialect-toggle {
+  display: flex;
+  border: 1px solid var(--vp-c-border);
   border-radius: 8px;
+  overflow: hidden;
+}
+
+.dialect-btn {
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-2);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.dialect-btn + .dialect-btn {
+  border-left: 1px solid var(--vp-c-border);
+}
+
+.dialect-btn.active {
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+}
+
+.output-errors {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px 8px 0 0;
+  padding: 10px 14px;
+  margin-bottom: 0;
+}
+
+.dark .output-errors {
+  background: color-mix(in srgb, #92400e 12%, transparent);
+  border-color: #92400e;
+}
+
+.output-errors-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #c2410c;
+  margin-bottom: 6px;
+}
+
+.dark .output-errors-title {
+  color: #fb923c;
+}
+
+.output-error-item {
   font-family: var(--vp-font-family-mono);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  color: #9a3412;
+  display: flex;
+  gap: 8px;
+  padding: 1px 0;
+}
+
+.dark .output-error-item {
+  color: #fdba74;
+}
+
+.err-loc {
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.output-errors + .tabs {
+  border-top: none;
 }
 
 .tabs {
