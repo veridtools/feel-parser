@@ -7,7 +7,8 @@ export interface Loc {
 
 export interface ParseError {
   message: string;
-  pos: number;
+  start: number;
+  end: number;
 }
 
 export type ParseResult = {

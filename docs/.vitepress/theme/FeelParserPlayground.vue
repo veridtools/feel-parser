@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { parse, tokenize } from '../../../src/index.ts';
+import { summarize } from '../../../src/summarize.ts';
 
 // ── Quick examples ────────────────────────────────────────────────────────────
 
@@ -11,28 +12,28 @@ const EXAMPLES = [
     expr: '(1 + 2) * 3',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'If-else',
     expr: 'if score >= 700 then "approved" else "declined"',
     names: 'score',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Between',
     expr: 'age between 18 and 65',
     names: 'age',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'In range',
     expr: 'score in [600..850]',
     names: 'score',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   // ── Strings ──
   {
@@ -40,14 +41,14 @@ const EXAMPLES = [
     expr: 'upper case(substring("hello world", 1, 5))',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'String join',
     expr: 'string join(["Alice", "Bob", "Carol"], ", ")',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   // ── Lists ──
   {
@@ -55,28 +56,28 @@ const EXAMPLES = [
     expr: '[{name: "Alice", age: 30}, {name: "Bob", age: 17}][item.age >= 18]',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Sort',
     expr: 'sort([3, 1, 4, 1, 5], function(a, b) a < b)',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'For loop',
     expr: 'for x in 1..5 return x * x',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Some / every',
     expr: 'every item in orders satisfies item.amount > 0',
     names: 'orders',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   // ── Context ──
   {
@@ -84,14 +85,14 @@ const EXAMPLES = [
     expr: '{name: "Alice", age: 30, active: true}',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Context path',
     expr: 'customer.address.city',
     names: 'customer',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   // ── Functions ──
   {
@@ -99,14 +100,14 @@ const EXAMPLES = [
     expr: 'function(x, y) if x > y then x else y',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Named args',
     expr: 'substring(string: "hello world", start position: 7)',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   // ── Types ──
   {
@@ -114,7 +115,7 @@ const EXAMPLES = [
     expr: '[1, 2, 3] instance of list<number>',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   // ── Temporal ──
   {
@@ -122,28 +123,28 @@ const EXAMPLES = [
     expr: '@"2024-06-15" + duration("P30D")',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Duration',
     expr: 'years and months duration(date("2020-01-01"), date("2024-06-15"))',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Format date',
     expr: 'format date(date("2024-06-15"), "dd/MM/yyyy")',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Format number',
     expr: 'format number(1234567.89, "#,##0.00")',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   // ── Advanced ──
   {
@@ -151,28 +152,28 @@ const EXAMPLES = [
     expr: 'Monthly Salary * 12',
     names: 'Monthly Salary',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Let',
     expr: 'let base = 100 in let tax = base * 0.1 in base + tax',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Pipeline',
     expr: '"  hello world  " |> trim |> upper case',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Recursion',
     expr: '{fact: function(n) if n <= 1 then 1 else n * fact(n - 1)}.fact(5)',
     names: '',
     dialect: 'expression' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   // ── Unary tests (DMN input cell) ──
   {
@@ -180,35 +181,35 @@ const EXAMPLES = [
     expr: '>= 700',
     names: '',
     dialect: 'unary-tests' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Unary: range',
     expr: '[18..65]',
     names: '',
     dialect: 'unary-tests' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Unary: list',
     expr: '"Low","Medium","High"',
     names: '',
     dialect: 'unary-tests' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Unary: not',
     expr: 'not("High","Medium")',
     names: '',
     dialect: 'unary-tests' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   {
     label: 'Unary: wildcard',
     expr: '-',
     names: '',
     dialect: 'unary-tests' as const,
-    tab: 'ast' as const,
+    tab: 'summary' as const,
   },
   // ── Tokens ──
   {
@@ -225,8 +226,9 @@ const EXAMPLES = [
 const expression = ref('(1 + 2) * 3');
 const namesStr = ref('');
 const dialect = ref<'expression' | 'unary-tests'>('expression');
-const activeTab = ref<'ast' | 'tokens'>('ast');
-const astResult = ref<string | null>(null);
+const activeTab = ref<'summary' | 'json' | 'tokens'>('summary');
+const summaryResult = ref<string | null>(null);
+const jsonResult = ref<string | null>(null);
 const tokensResult = ref<string | null>(null);
 const error = ref<string | null>(null);
 const ran = ref(false);
@@ -234,7 +236,8 @@ const selectedExample = ref<string | null>(null);
 
 function run() {
   error.value = null;
-  astResult.value = null;
+  summaryResult.value = null;
+  jsonResult.value = null;
   tokensResult.value = null;
   ran.value = true;
 
@@ -246,17 +249,21 @@ function run() {
   );
 
   try {
-    // Always compute both
-    const tokens = tokenize(expression.value).map((t) => ({
-      type: t.type,
-      value: t.value || undefined,
-      start: t.start,
-      end: t.end,
-    }));
-    tokensResult.value = JSON.stringify(tokens, null, 2);
+    const tokens = tokenize(expression.value);
+    tokensResult.value = JSON.stringify(
+      tokens.map((t) => ({
+        type: t.type,
+        value: t.value || undefined,
+        start: t.start,
+        end: t.end,
+      })),
+      null,
+      2,
+    );
 
     const ast = parse(expression.value, dialect.value, knownNames);
-    astResult.value = JSON.stringify(ast, null, 2);
+    jsonResult.value = JSON.stringify(ast, null, 2);
+    summaryResult.value = summarize(ast, tokens, dialect.value);
   } catch (e) {
     error.value = String(e);
   }
@@ -268,7 +275,7 @@ function loadExample(ex: (typeof EXAMPLES)[number]) {
   expression.value = ex.expr;
   namesStr.value = ex.names;
   dialect.value = ex.dialect;
-  activeTab.value = ex.tab;
+  activeTab.value = ex.tab as 'summary' | 'json' | 'tokens';
   run();
 }
 
@@ -327,16 +334,21 @@ onMounted(() => run());
         <div class="tabs">
           <button
             class="tab-btn"
-            :class="{ active: activeTab === 'ast' }"
-            @click="activeTab = 'ast'"
-          >AST</button>
+            :class="{ active: activeTab === 'summary' }"
+            @click="activeTab = 'summary'"
+          >summary</button>
+          <button
+            class="tab-btn"
+            :class="{ active: activeTab === 'json' }"
+            @click="activeTab = 'json'"
+          >json</button>
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'tokens' }"
             @click="activeTab = 'tokens'"
-          >Tokens</button>
+          >tokens</button>
         </div>
-        <pre class="output-value">{{ activeTab === 'ast' ? astResult : tokensResult }}</pre>
+        <pre class="output-value">{{ activeTab === 'summary' ? summaryResult : activeTab === 'json' ? jsonResult : tokensResult }}</pre>
       </template>
     </div>
 

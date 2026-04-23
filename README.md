@@ -109,7 +109,7 @@ Like `parse()` but never throws. Returns `{ ast: AstNode | null, errors: ParseEr
 
 ```ts
 const { ast, errors } = safeParse('1 +')
-// ast → null, errors → [{ message: '...', pos: 3 }]
+// ast → null, errors → [{ message: '...', start: 3, end: 4 }]
 ```
 
 ### `walk(node, visitor)`
@@ -172,8 +172,10 @@ All tests are colocated with the source files they cover (`src/**/*.test.ts`):
 | `src/lexer/index.test.ts` | Tokenizer — all token types, positions |
 | `src/parser/index.test.ts` | AST shapes for all node types |
 | `src/parser/errors.test.ts` | Parse errors and error messages |
+| `src/parser/safeParse.test.ts` | `safeParse()` — valid/invalid inputs, `ParseError` shape |
 | `src/index.test.ts` | Public API, DMN / TCK expression patterns |
 | `src/language.test.ts` | Full FEEL language coverage — all 80+ builtins, OMG DMN 1.5 conformance, vendor extensions |
+| `src/summarize.test.ts` | `summarize()` — header fields, root detail, node-type breakdown, loc spans |
 
 ## License
 

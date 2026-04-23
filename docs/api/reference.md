@@ -199,7 +199,8 @@ type ParseResult = {
 
 interface ParseError {
   message: string;
-  pos: number; // byte offset where the error occurred
+  start: number; // inclusive byte offset of the offending token
+  end: number;   // exclusive byte offset of the offending token
 }
 ```
 
@@ -210,7 +211,7 @@ import { safeParse } from '@veridtools/feel-parser';
 
 const { ast, errors } = safeParse('1 +');
 // ast    → null
-// errors → [{ message: 'Unexpected token: EOF ...', pos: 3 }]
+// errors → [{ message: 'Unexpected token: EOF ...', start: 3, end: 3 }]
 
 const ok = safeParse('1 + 2');
 // ok.ast    → BinaryOp { op: '+', ... }

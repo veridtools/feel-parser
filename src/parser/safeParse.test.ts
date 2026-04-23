@@ -14,15 +14,25 @@ describe('safeParse', () => {
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatchObject({
       message: expect.any(String),
-      pos: expect.any(Number),
+      start: expect.any(Number),
+      end: expect.any(Number),
     });
   });
 
-  it('error pos points to the bad token', () => {
+  it('error span points to the bad token', () => {
     const result = safeParse('if true then');
     expect(result.ast).toBeNull();
     const err = result.errors[0]!;
-    expect(err.pos).toBeGreaterThanOrEqual(0);
+    expect(err.start).toBeGreaterThanOrEqual(0);
+    expect(err.end).toBeGreaterThanOrEqual(err.start);
+  });
+
+  it('error span covers the offending token range', () => {
+    // '1 +' — EOF token at position 3, single char
+    const result = safeParse('1 +');
+    const err = result.errors[0]!;
+    expect(err.start).toBe(3);
+    expect(err.end).toBeGreaterThanOrEqual(err.start);
   });
 
   it('works with unary-tests dialect', () => {
