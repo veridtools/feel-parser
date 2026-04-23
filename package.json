@@ -1,6 +1,6 @@
 {
   "name": "@veridtools/feel-parser",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "FEEL expression lexer and parser — produces a typed AST from FEEL source",
   "author": "Victor Martins Bicudo",
   "license": "MIT",
