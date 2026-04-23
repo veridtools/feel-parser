@@ -1,0 +1,65 @@
+name: Bug Report — Incorrect Parse
+description: Report an expression that fails to parse, produces a wrong AST, or gives an incorrect error message
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to report a parse bug.
+        **Parse failure** = valid FEEL expression throws an error.
+        **Wrong AST** = expression parses but the resulting AST shape is incorrect.
+        **Wrong error** = invalid expression throws an unhelpful or misleading error.
+  - type: dropdown
+    id: bug-type
+    attributes:
+      label: Type of issue
+      options:
+        - Parse failure (valid expression throws)
+        - Wrong AST shape
+        - Wrong or misleading error message
+        - Incorrect source location (loc)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: expression
+    attributes:
+      label: FEEL expression
+      description: The expression that reproduces the issue. Minimal reproduction preferred.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: known-names
+    attributes:
+      label: Known names (if any)
+      description: Comma-separated names passed as the `knownNames` argument, if relevant.
+      placeholder: e.g. Monthly Salary, Full Name
+  - type: dropdown
+    id: dialect
+    attributes:
+      label: Dialect
+      options:
+        - expression (default)
+        - unary-tests
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: Paste the error message or JSON.stringify of the AST you received.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: What should the parser have returned?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      placeholder: e.g. 0.1.0
