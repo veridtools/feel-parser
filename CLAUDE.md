@@ -23,8 +23,10 @@ This is a **FEEL expression lexer and parser**, published as `@veridtools/feel-p
 ### Pipeline: `parse(expression, dialect?, knownNames?)`
 
 ```
-src/lexer/index.ts      → tokenize(source) → Token[]
-src/parser/index.ts     → parse(source, dialect, knownNames) → AstNode
+src/lexer/tokens.ts     → TokenType enum, Token interface, KEYWORDS
+src/lexer/index.ts      → Lexer class → tokenize(source) → Token[]
+src/parser/parser.ts    → Parser class (internal, recursive descent)
+src/parser/index.ts     → parse() + safeParse() public functions → AstNode
 ```
 
 ### Key files
@@ -33,10 +35,13 @@ src/parser/index.ts     → parse(source, dialect, knownNames) → AstNode
 |------|---------------|
 | `src/types.ts` | `FeelDialect` type (`'expression' \| 'unary-tests'`) |
 | `src/index.ts` | Public API — all exports below |
-| `src/lexer/index.ts` | Tokenizer — FEEL source → `Token[]` |
+| `src/lexer/tokens.ts` | `TokenType` enum, `Token` interface, `KEYWORDS` map |
+| `src/lexer/index.ts` | `Lexer` class + `tokenize()` — FEEL source → `Token[]` |
 | `src/parser/ast.ts` | All AST node type definitions + `Loc`, `ParseError`, `ParseResult` |
 | `src/parser/constants.ts` | Keywords, operators, precedence rules, `KNOWN_NAMES` |
-| `src/parser/index.ts` | Recursive descent parser — tokens → `AstNode`, plus `safeParse()` |
+| `src/parser/parser.ts` | `Parser` class (internal) — recursive descent, all 24 node types |
+| `src/parser/index.ts` | `parse()` + `safeParse()` public functions |
+| `src/summarize.ts` | `summarize(ast, tokens, dialect)` — human-readable parse overview (used by docs playground) |
 | `src/walker.ts` | `walk(node, visitor)` + `Visitor` type |
 | `bin/feel-parser.ts` | CLI entrypoint — `feel-parser` command |
 
@@ -51,6 +56,7 @@ src/parser/errors.test.ts       → parse error messages
 src/parser/safeParse.test.ts    → safeParse() — valid/invalid inputs, ParseError shape
 src/index.test.ts               → public API, DMN / TCK expression patterns
 src/language.test.ts            → full FEEL language coverage (80+ builtins, OMG conformance, vendor extensions)
+src/summarize.test.ts           → summarize() — header fields, root detail, node-type breakdown, loc spans
 src/walker.test.ts              → walk() traversal, depth-first ordering, null-safe RangeLiteral
 ```
 
