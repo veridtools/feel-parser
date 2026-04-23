@@ -1,5 +1,11 @@
 # @veridtools/feel-parser
 
+## 0.2.1
+
+### Patch Changes
+
+- 0f316fd: fix: solve to run cli local
+
 ## 0.2.0
 
 ### Minor Changes
