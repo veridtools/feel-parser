@@ -1,5 +1,11 @@
 # @veridtools/feel-parser
 
+## 0.2.0
+
+### Minor Changes
+
+- ea43a7a: Add error recovery to safeParse, ParseSyntaxError, and ErrorNode
+
 ## 0.1.1
 
 ### Patch Changes
