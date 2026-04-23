@@ -261,7 +261,7 @@ const jsonResult = ref<string | null>(null);
 const tokensResult = ref<string | null>(null);
 const parseErrors = ref<Array<{ message: string; start: number; end: number }>>([]);
 const ran = ref(false);
-const selectedExample = ref<string | null>(null);
+const selectedExample = ref<string | null>(EXAMPLES[0].label);
 
 function run() {
   summaryResult.value = null;
