@@ -1,0 +1,23 @@
+import { defineConfig } from 'tsup';
+
+export default defineConfig([
+  {
+    entry: { index: 'src/index.ts' },
+    format: ['esm', 'cjs'],
+    dts: true,
+    sourcemap: true,
+    clean: true,
+    minify: false,
+    splitting: false,
+    treeshake: true,
+  },
+  {
+    entry: { 'bin/feel-parser': 'bin/feel-parser.ts' },
+    format: ['esm'],
+    dts: false,
+    splitting: false,
+    clean: false,
+    sourcemap: false,
+    banner: { js: '#!/usr/bin/env node' },
+  },
+]);
